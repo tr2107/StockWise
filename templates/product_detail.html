@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, stock_badge, movement_table, empty_state %}
+{% block title %}{{ product.name }}{% endblock %}
+{% block actions %}
+  <a class="btn btn-ghost" href="{{ url_for('product_edit', product_id=product.id) }}">Edit</a>
+  {% if product.is_active %}
+    <a class="btn btn-ghost" href="{{ url_for('stock_out', product_id=product.id) }}">{{ icon('out') }} Stock out</a>
+    <a class="btn btn-primary" href="{{ url_for('stock_in', product_id=product.id) }}">{{ icon('in') }} Stock in</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+{% if product.is_active and product.quantity <= product.reorder_level %}
+  <div class="flash flash-warning">
+    <span><strong>{{ 'Out of stock' if product.quantity == 0 else 'Low stock' }}:</strong>
+    {{ product.name }} has {{ product.quantity }} in stock (reorder level {{ product.reorder_level }}).
+    Suggested order: <strong>{{ suggested }}</strong> units to reach the target of {{ product.target_level }}.</span>
+  </div>
+{% endif %}
+
+<section class="card">
+  <div class="card-head"><h2>Details</h2>{{ stock_badge(product) }}</div>
+  <dl class="details">
+    <div><dt>SKU</dt><dd>{{ product.sku }}</dd></div>
+    <div><dt>Category</dt><dd>{{ product.category }}</dd></div>
+    <div><dt>Supplier</dt><dd>{% if product.supplier_id %}<a href="{{ url_for('supplier_detail', supplier_id=product.supplier_id) }}">{{ product.supplier_name }}</a>{% else %}—{% endif %}</dd></div>
+    <div><dt>In stock</dt><dd><strong>{{ product.quantity }}</strong></dd></div>
+    <div><dt>Reorder level</dt><dd>{{ product.reorder_level }}</dd></div>
+    <div><dt>Target level</dt><dd>{{ product.target_level }}</dd></div>
+    <div><dt>Unit price</dt><dd>{{ product.unit_price|money }}</dd></div>
+    <div><dt>Stock value</dt><dd>{{ (product.quantity * product.unit_price)|money }}</dd></div>
+  </dl>
+</section>
+
+<section class="card">
+  <div class="card-head"><h2>Stock history</h2></div>
+  {% if history %}{{ movement_table(history, show_product=False) }}
+  {% else %}{{ empty_state('No history yet', 'Stock movements for this product will be listed here.') }}{% endif %}
+</section>
+{% endblock %}

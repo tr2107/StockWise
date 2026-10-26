@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import field, icon, empty_state %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+{% if not products %}
+  <section class="card">
+    {{ empty_state('No products to update', 'Add a product first, then you can record stock movements.', 'Add product', url_for('product_new')) }}
+  </section>
+{% else %}
+<section class="card form-card">
+  <p class="lead">
+    {% if kind == 'IN' %}Record stock you have <strong>received</strong>. The product quantity goes up and a history entry is saved.
+    {% else %}Record stock that was <strong>sold, used or removed</strong>. The quantity goes down, and you cannot remove more than you have.{% endif %}
+  </p>
+  <form method="post" novalidate id="movement-form" data-kind="{{ kind }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if errors.get('form') %}<div class="flash flash-error">{{ errors['form'] }}</div>{% endif %}
+
+    <div class="form-grid">
+      <div class="field full {% if errors.get('product_id') %}has-error{% endif %}">
+        <label for="product_id">Product <span class="req">*</span></label>
+        <select id="product_id" name="product_id" required>
+          <option value="">Select a product…</option>
+          {% for p in products %}
+            <option value="{{ p.id }}" data-qty="{{ p.quantity }}" {{ 'selected' if (v.get('product_id') or '')|string == p.id|string }}>{{ p.name }} ({{ p.sku }}) — {{ p.quantity }} in stock</option>
+          {% endfor %}
+        </select>
+        {% if errors.get('product_id') %}<small class="error-text">{{ errors['product_id'] }}</small>{% endif %}
+        <small class="hint" id="stock-hint" hidden></small>
+      </div>
+
+      {{ field('quantity', 'Quantity ' ~ ('received' if kind == 'IN' else 'removed'), v, errors, type='number', required=True, attrs='min="1" step="1" inputmode="numeric"') }}
+      {{ field('transaction_date', 'Date', v, errors, type='date', required=True, attrs='max="' ~ today ~ '"') }}
+
+      {% if kind == 'OUT' %}
+      <div class="field {% if errors.get('reason') %}has-error{% endif %}">
+        <label for="reason">Reason <span class="req">*</span></label>
+        <select id="reason" name="reason" required>
+          <option value="">Select a reason…</option>
+          {% for r in reasons %}<option value="{{ r }}" {{ 'selected' if v.get('reason') == r }}>{{ r }}</option>{% endfor %}
+        </select>
+        {% if errors.get('reason') %}<small class="error-text">{{ errors['reason'] }}</small>{% endif %}
+      </div>
+      {% endif %}
+
+      {{ field('reference', 'Reference number' ~ ('' if kind == 'OUT' else ' (optional)'), v, errors, hint=('e.g. purchase order or delivery note number' if kind == 'IN' else 'e.g. invoice or order number (optional)'), attrs='maxlength="60"') }}
+
+      <div class="field full {% if errors.get('notes') %}has-error{% endif %}">
+        <label for="notes">Notes (optional)</label>
+        <textarea id="notes" name="notes" rows="3" maxlength="300">{{ v.get('notes', '') or '' }}</textarea>
+        {% if errors.get('notes') %}<small class="error-text">{{ errors['notes'] }}</small>{% endif %}
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit">{{ 'Record stock in' if kind == 'IN' else 'Record stock out' }}</button>
+      <a class="btn btn-ghost" href="{{ url_for('dashboard') }}">Cancel</a>
+    </div>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

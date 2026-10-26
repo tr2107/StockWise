@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, stock_badge, movement_table, empty_state %}
+{% block title %}Reports{% endblock %}
+
+{% block content %}
+{% set qs = {'category': filters.category, 'type': filters.type, 'date_from': filters.date_from, 'date_to': filters.date_to} %}
+<section class="card">
+  <form class="filters" method="get" action="{{ url_for('reports') }}">
+    <select name="category" aria-label="Category">
+      <option value="">All categories</option>
+      {% for c in categories %}<option value="{{ c }}" {{ 'selected' if filters.category == c }}>{{ c }}</option>{% endfor %}
+    </select>
+    <select name="type" aria-label="Transaction type">
+      <option value="">All transaction types</option>
+      <option value="IN" {{ 'selected' if filters.type == 'IN' }}>Stock in only</option>
+      <option value="OUT" {{ 'selected' if filters.type == 'OUT' }}>Stock out only</option>
+    </select>
+    <label class="inline-label">From <input type="date" name="date_from" value="{{ filters.date_from }}"></label>
+    <label class="inline-label">To <input type="date" name="date_to" value="{{ filters.date_to }}"></label>
+    <button class="btn btn-primary" type="submit">Apply filters</button>
+    <a class="btn btn-ghost" href="{{ url_for('reports') }}">Reset</a>
+  </form>
+  <p class="muted small">Category applies to every section. Date and transaction type apply to the stock movement history.</p>
+</section>
+
+<section class="stats stats-3">
+  <div class="stat"><div class="stat-icon c-violet">{{ icon('dollar') }}</div><div><span class="stat-label">Inventory value</span><strong class="stat-value">{{ total_value|money }}</strong></div></div>
+  <div class="stat"><div class="stat-icon c-teal">{{ icon('list') }}</div><div><span class="stat-label">Units in stock</span><strong class="stat-value">{{ '{:,}'.format(total_units) }}</strong></div></div>
+  <div class="stat {% if low %}stat-alert{% endif %}"><div class="stat-icon c-amber">{{ icon('alert') }}</div><div><span class="stat-label">Low-stock products</span><strong class="stat-value">{{ low|length }}</strong></div></div>
+</section>
+
+<section class="card">
+  <div class="card-head"><h2>Current stock by product</h2>
+    <a class="btn btn-sm btn-ghost" href="{{ url_for('export_csv', kind='stock', **qs) }}">{{ icon('download') }} Export CSV</a></div>
+  {% if stock %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Product</th><th>Category</th><th>Supplier</th><th class="num">Qty</th><th class="num">Unit price</th><th class="num">Stock value</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for p in stock %}
+      <tr>
+        <td><a href="{{ url_for('product_detail', product_id=p.id) }}"><strong>{{ p.name }}</strong></a><div class="sub">{{ p.sku }}</div></td>
+        <td>{{ p.category }}</td><td>{{ p.supplier_name or '—' }}</td>
+        <td class="num">{{ p.quantity }}</td><td class="num">{{ p.unit_price|money }}</td>
+        <td class="num">{{ p.stock_value|money }}</td><td>{{ stock_badge(p) }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+    <tfoot><tr><td colspan="3"><strong>Total</strong></td><td class="num"><strong>{{ total_units }}</strong></td><td></td><td class="num"><strong>{{ total_value|money }}</strong></td><td></td></tr></tfoot>
+  </table></div>
+  {% else %}{{ empty_state('No products to report on', 'Add products or change the category filter.', 'Add product', url_for('product_new')) }}{% endif %}
+</section>
+
+<section class="grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Inventory value by category</h2></div>
+    {% if by_category %}
+    <div class="table-wrap"><table>
+      <thead><tr><th>Category</th><th class="num">Products</th><th class="num">Units</th><th class="num">Value</th></tr></thead>
+      <tbody>{% for c in by_category %}<tr><td>{{ c.category }}</td><td class="num">{{ c.products }}</td><td class="num">{{ c.units }}</td><td class="num">{{ c.value|money }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% else %}<p class="muted pad">Nothing to show.</p>{% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Low-stock products</h2>
+      <a class="btn btn-sm btn-ghost" href="{{ url_for('export_csv', kind='low-stock', **qs) }}">{{ icon('download') }} Export CSV</a></div>
+    {% if low %}
+    <div class="table-wrap"><table>
+      <thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Level</th><th class="num">Order</th></tr></thead>
+      <tbody>{% for p in low %}<tr><td><a href="{{ url_for('product_detail', product_id=p.id) }}">{{ p.name }}</a></td><td class="num">{{ p.quantity }}</td><td class="num">{{ p.reorder_level }}</td><td class="num"><strong>{{ p.suggested_order }}</strong></td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% else %}<div class="all-good">✓ Nothing needs reordering.</div>{% endif %}
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-head"><h2>Stock movement history</h2>
+    <a class="btn btn-sm btn-ghost" href="{{ url_for('export_csv', kind='movements', **qs) }}">{{ icon('download') }} Export CSV</a></div>
+  {% if movements %}{{ movement_table(movements) }}
+  <p class="muted table-foot">{{ movements|length }} movement{{ '' if movements|length == 1 else 's' }} match the filters.</p>
+  {% else %}{{ empty_state('No movements found', 'There are no stock movements for these filters.') }}{% endif %}
+</section>
+{% endblock %}

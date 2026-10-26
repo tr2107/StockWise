@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, movement_table, empty_state %}
+{% block title %}Transactions{% endblock %}
+{% block actions %}<a class="btn btn-ghost" href="{{ url_for('export_csv', kind='movements', type=filters.type, date_from=filters.date_from, date_to=filters.date_to) }}">{{ icon('download') }} Export CSV</a>{% endblock %}
+
+{% block content %}
+<section class="card">
+  <form class="filters" method="get" action="{{ url_for('transactions') }}">
+    <input type="search" name="q" value="{{ filters.q }}" placeholder="Search product, SKU, reference or notes…" aria-label="Search transactions">
+    <select name="type" aria-label="Type">
+      <option value="">All types</option>
+      <option value="IN" {{ 'selected' if filters.type == 'IN' }}>Stock in</option>
+      <option value="OUT" {{ 'selected' if filters.type == 'OUT' }}>Stock out</option>
+    </select>
+    <label class="inline-label">From <input type="date" name="date_from" value="{{ filters.date_from }}"></label>
+    <label class="inline-label">To <input type="date" name="date_to" value="{{ filters.date_to }}"></label>
+    <button class="btn btn-primary" type="submit">Filter</button>
+    <a class="btn btn-ghost" href="{{ url_for('transactions') }}">Reset</a>
+  </form>
+
+  {% if rows %}
+    {{ movement_table(rows) }}
+    <p class="muted table-foot">{{ rows|length }} transaction{{ '' if rows|length == 1 else 's' }} shown (latest 300 at most). Records are permanent and cannot be edited or deleted.</p>
+  {% elif filters.q or filters.type or filters.date_from or filters.date_to %}
+    {{ empty_state('No transactions match your filters', 'Try widening the date range or resetting the filters.', 'Reset filters', url_for('transactions')) }}
+  {% else %}
+    {{ empty_state('No transactions yet', 'Every stock-in and stock-out will be listed here with before and after quantities.', 'Record stock in', url_for('stock_in')) }}
+  {% endif %}
+</section>
+{% endblock %}

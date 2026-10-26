@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, stock_badge, empty_state %}
+{% block title %}Products{% endblock %}
+{% block actions %}<a class="btn btn-primary" href="{{ url_for('product_new') }}">{{ icon('plus') }} Add product</a>{% endblock %}
+
+{% block content %}
+<section class="card">
+  <form class="filters" method="get" action="{{ url_for('products') }}">
+    <input type="search" name="q" value="{{ filters.q }}" placeholder="Search name, SKU or category…" aria-label="Search products">
+    <select name="category" aria-label="Category">
+      <option value="">All categories</option>
+      {% for c in categories %}<option value="{{ c }}" {{ 'selected' if filters.category == c }}>{{ c }}</option>{% endfor %}
+    </select>
+    <select name="supplier" aria-label="Supplier">
+      <option value="">All suppliers</option>
+      {% for s in suppliers %}<option value="{{ s.id }}" {{ 'selected' if filters.supplier == s.id|string }}>{{ s.name }}</option>{% endfor %}
+    </select>
+    <select name="status" aria-label="Stock status">
+      <option value="">Any stock level</option>
+      <option value="low" {{ 'selected' if filters.status == 'low' }}>Low stock (reorder)</option>
+      <option value="out" {{ 'selected' if filters.status == 'out' }}>Out of stock</option>
+      <option value="ok" {{ 'selected' if filters.status == 'ok' }}>Healthy stock</option>
+    </select>
+    <label class="check"><input type="checkbox" name="archived" value="1" {{ 'checked' if filters.archived }}> Show archived</label>
+    <button class="btn btn-primary" type="submit">Filter</button>
+    <a class="btn btn-ghost" href="{{ url_for('products') }}">Reset</a>
+  </form>
+
+  {% if products %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>Product</th><th>Category</th><th>Supplier</th>
+        <th class="num">Qty</th><th class="num">Reorder at</th><th class="num">Unit price</th><th class="num">Value</th>
+        <th>Status</th><th></th>
+      </tr></thead>
+      <tbody>
+      {% for p in products %}
+        <tr class="{{ 'row-muted' if not p.is_active }}">
+          <td><a href="{{ url_for('product_detail', product_id=p.id) }}"><strong>{{ p.name }}</strong></a><div class="sub">{{ p.sku }}</div></td>
+          <td>{{ p.category }}</td>
+          <td>{{ p.supplier_name or '—' }}</td>
+          <td class="num"><strong>{{ p.quantity }}</strong></td>
+          <td class="num">{{ p.reorder_level }}</td>
+          <td class="num">{{ p.unit_price|money }}</td>
+          <td class="num">{{ (p.quantity * p.unit_price)|money }}</td>
+          <td>{{ stock_badge(p) }}</td>
+          <td class="actions">
+            <a class="btn btn-sm btn-ghost" href="{{ url_for('product_edit', product_id=p.id) }}">Edit</a>
+            <form method="post" action="{{ url_for('product_archive', product_id=p.id) }}" class="inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="action" value="{{ 'archive' if p.is_active else 'restore' }}">
+              <button class="btn btn-sm btn-ghost" type="submit">{{ 'Archive' if p.is_active else 'Restore' }}</button>
+            </form>
+            <form method="post" action="{{ url_for('product_delete', product_id=p.id) }}" class="inline"
+                  data-confirm="Delete “{{ p.name }}”? This cannot be undone. (Products with stock history cannot be deleted.)">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-danger-ghost" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="muted table-foot">{{ products|length }} product{{ '' if products|length == 1 else 's' }} shown</p>
+  {% elif filters.q or filters.category or filters.supplier or filters.status %}
+    {{ empty_state('No products match your filters', 'Try a different search or reset the filters.', 'Reset filters', url_for('products')) }}
+  {% else %}
+    {{ empty_state('No products yet', 'Add your first product to start tracking stock levels.', 'Add product', url_for('product_new')) }}
+  {% endif %}
+</section>
+{% endblock %}

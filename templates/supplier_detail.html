@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, stock_badge, empty_state %}
+{% block title %}{{ supplier.name }}{% endblock %}
+{% block actions %}<a class="btn btn-ghost" href="{{ url_for('supplier_edit', supplier_id=supplier.id) }}">Edit supplier</a>{% endblock %}
+
+{% block content %}
+<section class="card">
+  <div class="card-head"><h2>Contact details</h2></div>
+  <dl class="details">
+    <div><dt>Contact person</dt><dd>{{ supplier.contact_person or '—' }}</dd></div>
+    <div><dt>Phone</dt><dd>{{ supplier.phone or '—' }}</dd></div>
+    <div><dt>Email</dt><dd>{% if supplier.email %}<a href="mailto:{{ supplier.email }}">{{ supplier.email }}</a>{% else %}—{% endif %}</dd></div>
+    <div class="full"><dt>Address</dt><dd>{{ supplier.address or '—' }}</dd></div>
+  </dl>
+</section>
+
+<section class="card">
+  <div class="card-head"><h2>Products supplied</h2><a class="link" href="{{ url_for('product_new') }}">{{ icon('plus') }} Add product</a></div>
+  {% if products %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Product</th><th>Category</th><th class="num">In stock</th><th class="num">Reorder at</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for p in products %}
+        <tr class="{{ 'row-muted' if not p.is_active }}">
+          <td><a href="{{ url_for('product_detail', product_id=p.id) }}"><strong>{{ p.name }}</strong></a><div class="sub">{{ p.sku }}</div></td>
+          <td>{{ p.category }}</td>
+          <td class="num">{{ p.quantity }}</td>
+          <td class="num">{{ p.reorder_level }}</td>
+          <td>{{ stock_badge(p) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ empty_state('No products linked yet', 'Choose this supplier when adding or editing a product.') }}
+  {% endif %}
+</section>
+{% endblock %}

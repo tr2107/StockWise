@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, empty_state %}
+{% block title %}Suppliers{% endblock %}
+{% block actions %}<a class="btn btn-primary" href="{{ url_for('supplier_new') }}">{{ icon('plus') }} Add supplier</a>{% endblock %}
+
+{% block content %}
+<section class="card">
+  {% if suppliers %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Supplier</th><th>Contact</th><th>Phone</th><th>Email</th><th class="num">Products</th><th></th></tr></thead>
+      <tbody>
+      {% for s in suppliers %}
+        <tr>
+          <td><a href="{{ url_for('supplier_detail', supplier_id=s.id) }}"><strong>{{ s.name }}</strong></a></td>
+          <td>{{ s.contact_person or '—' }}</td>
+          <td>{{ s.phone or '—' }}</td>
+          <td>{% if s.email %}<a href="mailto:{{ s.email }}">{{ s.email }}</a>{% else %}—{% endif %}</td>
+          <td class="num">{{ s.product_count }}</td>
+          <td class="actions">
+            <a class="btn btn-sm btn-ghost" href="{{ url_for('supplier_detail', supplier_id=s.id) }}">View</a>
+            <a class="btn btn-sm btn-ghost" href="{{ url_for('supplier_edit', supplier_id=s.id) }}">Edit</a>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ empty_state('No suppliers yet', 'Add the companies you buy stock from, then link products to them.', 'Add supplier', url_for('supplier_new')) }}
+  {% endif %}
+</section>
+{% endblock %}

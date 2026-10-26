@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import field %}
+{% block title %}{{ 'Edit supplier' if editing else 'Add supplier' }}{% endblock %}
+
+{% block content %}
+<section class="card form-card">
+  <form method="post" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if errors.get('form') %}<div class="flash flash-error">{{ errors['form'] }}</div>{% endif %}
+    <div class="form-grid">
+      {{ field('name', 'Supplier name', v, errors, required=True, attrs='maxlength="120"') }}
+      {{ field('contact_person', 'Contact person', v, errors, attrs='maxlength="120"') }}
+      {{ field('phone', 'Phone number', v, errors, type='tel', attrs='maxlength="20"') }}
+      {{ field('email', 'Email', v, errors, type='email', attrs='maxlength="120"') }}
+      <div class="field full {% if errors.get('address') %}has-error{% endif %}">
+        <label for="address">Address</label>
+        <textarea id="address" name="address" rows="3" maxlength="300">{{ v.get('address', '') or '' }}</textarea>
+        {% if errors.get('address') %}<small class="error-text">{{ errors['address'] }}</small>{% endif %}
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit">{{ 'Save changes' if editing else 'Add supplier' }}</button>
+      <a class="btn btn-ghost" href="{{ url_for('suppliers') }}">Cancel</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

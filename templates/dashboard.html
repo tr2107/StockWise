@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, movement_table, empty_state %}
+{% block title %}Dashboard{% endblock %}
+{% block actions %}
+  <a class="btn btn-ghost" href="{{ url_for('stock_out') }}">{{ icon('out') }} Stock out</a>
+  <a class="btn btn-primary" href="{{ url_for('stock_in') }}">{{ icon('in') }} Stock in</a>
+{% endblock %}
+
+{% block content %}
+{% if total_products == 0 %}
+  <section class="card">
+    {{ empty_state('Welcome to StockWise', 'You have no products yet. Add your first product to start tracking stock, or load sample data with: python seed_demo.py', 'Add your first product', url_for('product_new')) }}
+  </section>
+{% else %}
+<section class="stats">
+  <div class="stat">
+    <div class="stat-icon c-blue">{{ icon('box') }}</div>
+    <div><span class="stat-label">Total products</span><strong class="stat-value">{{ total_products }}</strong></div>
+  </div>
+  <div class="stat">
+    <div class="stat-icon c-teal">{{ icon('list') }}</div>
+    <div><span class="stat-label">Units in stock</span><strong class="stat-value">{{ '{:,}'.format(total_units) }}</strong></div>
+  </div>
+  <div class="stat {% if reorder_count %}stat-alert{% endif %}">
+    <div class="stat-icon c-amber">{{ icon('alert') }}</div>
+    <div><span class="stat-label">Need reorder</span><strong class="stat-value">{{ reorder_count }}</strong></div>
+  </div>
+  <div class="stat">
+    <div class="stat-icon c-violet">{{ icon('dollar') }}</div>
+    <div><span class="stat-label">Inventory value</span><strong class="stat-value">{{ inventory_value|money }}</strong></div>
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Low-stock alerts</h2>
+    {% if low_stock %}<a href="{{ url_for('export_csv', kind='low-stock') }}" class="link">{{ icon('download') }} Export CSV</a>{% endif %}
+  </div>
+  {% if low_stock %}
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Product</th><th class="num">In stock</th><th class="num">Reorder level</th><th class="num">Target</th><th class="num">Suggested order</th><th>Supplier</th><th></th></tr></thead>
+      <tbody>
+      {% for p in low_stock %}
+        <tr class="{{ 'row-danger' if p.out_of_stock else 'row-warn' }}">
+          <td><a href="{{ url_for('product_detail', product_id=p.id) }}"><strong>{{ p.name }}</strong></a><div class="sub">{{ p.sku }}</div></td>
+          <td class="num"><span class="badge {{ 'badge-danger' if p.out_of_stock else 'badge-warn' }}">{{ p.quantity }}{% if p.out_of_stock %} · out{% endif %}</span></td>
+          <td class="num">{{ p.reorder_level }}</td>
+          <td class="num">{{ p.target_level }}</td>
+          <td class="num"><strong>Order {{ p.suggested_order }}</strong></td>
+          <td>{{ p.supplier_name or '—' }}</td>
+          <td class="actions"><a class="btn btn-sm btn-ghost" href="{{ url_for('stock_in', product_id=p.id) }}">Receive stock</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  {% else %}
+    <div class="all-good">✓ All products are above their reorder level. Nothing to order right now.</div>
+  {% endif %}
+</section>
+
+<section class="grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Stock by category</h2><span class="muted">units</span></div>
+    {% if categories %}
+      <div class="chart-box"><canvas id="category-chart" height="260" aria-label="Bar chart of units in stock by category" role="img"></canvas></div>
+      <div id="chart-fallback" class="chart-fallback" hidden>
+        <p class="muted">The chart could not load (offline?). Here are the same figures:</p>
+        <ul>{% for c in categories %}<li>{{ c.category }}: <strong>{{ c.units }}</strong></li>{% endfor %}</ul>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Recent transactions</h2><a class="link" href="{{ url_for('transactions') }}">View all</a></div>
+    {% if recent %}
+      <ul class="feed">
+      {% for t in recent %}
+        <li>
+          <span class="feed-dot {{ 'in' if t.type == 'IN' else 'out' }}">{{ icon('in' if t.type == 'IN' else 'out') }}</span>
+          <div class="feed-body">
+            <a href="{{ url_for('product_detail', product_id=t.product_id) }}">{{ t.product_name }}</a>
+            <div class="sub">{{ 'Received' if t.type == 'IN' else 'Removed' }} {{ t.quantity }} · {{ t.previous_qty }} → {{ t.new_qty }} · {{ t.transaction_date }}</div>
+          </div>
+        </li>
+      {% endfor %}
+      </ul>
+    {% else %}
+      {{ empty_state('No transactions yet', 'Record stock received or removed and it will appear here.', 'Record stock in', url_for('stock_in')) }}
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if categories %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+  // These numbers come straight from the database (see services.dashboard_numbers).
+  window.CATEGORY_DATA = {{ categories|tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endif %}
+{% endblock %}

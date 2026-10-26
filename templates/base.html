@@ -1,0 +1,71 @@
+{% from '_macros.html' import icon %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}StockWise{% endblock %} · StockWise</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="{{ url_for('dashboard') }}">
+      <span class="brand-mark">{{ icon('box') }}</span>
+      <span><strong>StockWise</strong><small>Inventory &amp; reorder alerts</small></span>
+    </a>
+    <nav>
+      {% set nav = [
+        ('dashboard', 'Dashboard', 'dashboard'),
+        ('products', 'Products', 'box'),
+        ('suppliers', 'Suppliers', 'truck'),
+        ('stock_in', 'Stock In', 'in'),
+        ('stock_out', 'Stock Out', 'out'),
+        ('transactions', 'Transactions', 'list'),
+        ('reports', 'Reports', 'chart') ] %}
+      {% for endpoint, label, ic in nav %}
+        <a href="{{ url_for(endpoint) }}"
+           class="nav-link {% if active_page == endpoint or (endpoint == 'products' and active_page.startswith('product')) or (endpoint == 'suppliers' and active_page.startswith('supplier')) %}active{% endif %}">
+          {{ icon(ic) }}<span>{{ label }}</span>
+          {% if endpoint == 'products' and low_stock_count %}<em class="nav-badge" title="Products needing reorder">{{ low_stock_count }}</em>{% endif %}
+        </a>
+      {% endfor %}
+    </nav>
+    <div class="sidebar-foot">Data is saved in a local SQLite database.</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn menu-btn" type="button" id="menu-btn" aria-label="Open menu">{{ icon('menu') }}</button>
+      <h1>{% block heading %}{{ self.title() }}{% endblock %}</h1>
+      <div class="topbar-actions">
+        {% if low_stock_count %}
+          <a class="alert-pill" href="{{ url_for('products', status='low') }}" title="Products at or below reorder level">
+            {{ icon('alert') }} {{ low_stock_count }} need{{ '' if low_stock_count != 1 else 's' }} reorder
+          </a>
+        {% endif %}
+        {% block actions %}{% endblock %}
+      </div>
+    </header>
+
+    <main class="content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flashes" role="status">
+            {% for category, message in messages %}
+              <div class="flash flash-{{ category }}">
+                <span>{{ message }}</span>
+                <button type="button" class="flash-close" aria-label="Dismiss">×</button>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

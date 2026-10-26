@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import field %}
+{% block title %}{{ 'Edit product' if editing else 'Add product' }}{% endblock %}
+
+{% block content %}
+<section class="card form-card">
+  <form method="post" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if errors.get('form') %}<div class="flash flash-error">{{ errors['form'] }}</div>{% endif %}
+
+    <div class="form-grid">
+      {{ field('name', 'Product name', v, errors, required=True, attrs='maxlength="120"') }}
+      {{ field('sku', 'SKU', v, errors, required=True, hint='Unique code, e.g. PEN-BLU-01. Saved in capitals.', attrs='maxlength="40"') }}
+
+      <div class="field {% if errors.get('category') %}has-error{% endif %}">
+        <label for="category">Category</label>
+        <input id="category" name="category" list="category-list" value="{{ v.get('category', '') or '' }}" maxlength="60" placeholder="General">
+        <datalist id="category-list">{% for c in categories %}<option value="{{ c }}">{% endfor %}</datalist>
+        {% if errors.get('category') %}<small class="error-text">{{ errors['category'] }}</small>{% else %}<small class="hint">Pick an existing one or type a new category.</small>{% endif %}
+      </div>
+
+      <div class="field {% if errors.get('supplier_id') %}has-error{% endif %}">
+        <label for="supplier_id">Supplier</label>
+        <select id="supplier_id" name="supplier_id">
+          <option value="">— None —</option>
+          {% for s in suppliers %}<option value="{{ s.id }}" {{ 'selected' if (v.get('supplier_id') or '')|string == s.id|string }}>{{ s.name }}</option>{% endfor %}
+        </select>
+        {% if errors.get('supplier_id') %}<small class="error-text">{{ errors['supplier_id'] }}</small>
+        {% elif not suppliers %}<small class="hint">No suppliers yet. <a href="{{ url_for('supplier_new') }}">Add one</a>.</small>{% endif %}
+      </div>
+
+      {% if editing %}
+        <div class="field">
+          <label>Current quantity</label>
+          <input value="{{ product.quantity }}" disabled>
+          <small class="hint">To change stock, use <a href="{{ url_for('stock_in', product_id=product.id) }}">Stock In</a> or <a href="{{ url_for('stock_out', product_id=product.id) }}">Stock Out</a> so the history stays correct.</small>
+        </div>
+      {% else %}
+        {{ field('quantity', 'Opening quantity', v, errors, type='number', hint='Units you have right now. Cannot be negative.', attrs='min="0" step="1"') }}
+      {% endif %}
+
+      {{ field('unit_price', 'Unit price (' ~ currency ~ ')', v, errors, type='number', attrs='min="0" step="0.01"') }}
+      {{ field('reorder_level', 'Reorder level', v, errors, type='number', required=True, hint='Warn me when stock is at or below this number.', attrs='min="0" step="1"') }}
+      {{ field('target_level', 'Target stock level', v, errors, type='number', hint='Used for reorder suggestions. Leave blank for 3 × reorder level.', attrs='min="0" step="1"') }}
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit">{{ 'Save changes' if editing else 'Add product' }}</button>
+      <a class="btn btn-ghost" href="{{ url_for('products') }}">Cancel</a>
+    </div>
+  </form>
+</section>
+{% endblock %}
