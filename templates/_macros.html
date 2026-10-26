@@ -1,0 +1,71 @@
+{# Small reusable pieces so the page templates stay short. #}
+
+{% macro icon(name) -%}
+<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{%- if name == 'dashboard' %}<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>
+{%- elif name == 'box' %}<path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3.3 7.5L12 12.5l8.7-5M12 22V12.5"/>
+{%- elif name == 'truck' %}<rect x="1" y="6" width="14" height="11" rx="1"/><path d="M15 10h4l3 3v4h-7"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>
+{%- elif name == 'in' %}<path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16"/>
+{%- elif name == 'out' %}<path d="M12 15V3m0 0L8 7m4-4l4 4M4 19h16"/>
+{%- elif name == 'list' %}<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>
+{%- elif name == 'chart' %}<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>
+{%- elif name == 'alert' %}<path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/><path d="M12 9v4m0 4h.01"/>
+{%- elif name == 'plus' %}<path d="M12 5v14M5 12h14"/>
+{%- elif name == 'menu' %}<path d="M3 6h18M3 12h18M3 18h18"/>
+{%- elif name == 'download' %}<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+{%- elif name == 'dollar' %}<path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+{%- endif %}</svg>
+{%- endmacro %}
+
+{# A labelled form field with its error message. #}
+{% macro field(name, label, v, errors, type='text', required=False, hint='', attrs='') -%}
+<div class="field {% if errors.get(name) %}has-error{% endif %}">
+  <label for="{{ name }}">{{ label }}{% if required %} <span class="req">*</span>{% endif %}</label>
+  <input id="{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ v.get(name, '') if v.get(name, '') is not none else '' }}" {% if required %}required{% endif %} {{ attrs|safe }}>
+  {% if hint and not errors.get(name) %}<small class="hint">{{ hint }}</small>{% endif %}
+  {% if errors.get(name) %}<small class="error-text">{{ errors[name] }}</small>{% endif %}
+</div>
+{%- endmacro %}
+
+{# Stock status badge for a product row. #}
+{% macro stock_badge(p) -%}
+  {% if not p.is_active %}<span class="badge badge-muted">Archived</span>
+  {% elif p.quantity == 0 %}<span class="badge badge-danger">Out of stock</span>
+  {% elif p.quantity <= p.reorder_level %}<span class="badge badge-warn">Reorder</span>
+  {% else %}<span class="badge badge-ok">In stock</span>{% endif %}
+{%- endmacro %}
+
+{% macro empty_state(title, text, link_text=None, link_url=None) -%}
+<div class="empty">
+  <div class="empty-art">{{ icon('box') }}</div>
+  <h3>{{ title }}</h3>
+  <p>{{ text }}</p>
+  {% if link_url %}<a class="btn btn-primary" href="{{ link_url }}">{{ link_text }}</a>{% endif %}
+</div>
+{%- endmacro %}
+
+{# A table of stock movements, used on several pages. #}
+{% macro movement_table(rows, show_product=True) -%}
+<div class="table-wrap">
+<table>
+  <thead><tr>
+    <th>ID</th><th>Date</th>{% if show_product %}<th>Product</th>{% endif %}<th>Type</th>
+    <th class="num">Qty</th><th class="num">Previous</th><th class="num">New</th><th>Reference / notes</th>
+  </tr></thead>
+  <tbody>
+  {% for t in rows %}
+    <tr>
+      <td>#{{ t.id }}</td>
+      <td>{{ t.transaction_date }}</td>
+      {% if show_product %}<td><a href="{{ url_for('product_detail', product_id=t.product_id) }}">{{ t.product_name }}</a><div class="sub">{{ t.sku }}</div></td>{% endif %}
+      <td>{% if t.type == 'IN' %}<span class="badge badge-ok">Stock in</span>{% else %}<span class="badge badge-out">Stock out</span>{% endif %}</td>
+      <td class="num {{ 'pos' if t.type == 'IN' else 'neg' }}">{{ '+' if t.type == 'IN' else '−' }}{{ t.quantity }}</td>
+      <td class="num">{{ t.previous_qty }}</td>
+      <td class="num"><strong>{{ t.new_qty }}</strong></td>
+      <td>{% if t.reason %}<span class="sub-inline">{{ t.reason }}</span> {% endif %}{{ t.reference }}{% if t.reference and t.notes %} · {% endif %}{{ t.notes }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{%- endmacro %}
